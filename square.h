@@ -20,6 +20,14 @@ public:
         }
         return 0;
     }
+    bool isEqualPoint(int i, int j) const
+    {
+        if (pos._x == i && pos._y == j)
+        {
+            return 1;
+        }
+        return 0;
+    }
     // seters
     void setFigure(Figure f)
     {

@@ -27,9 +27,12 @@ private:
     Square *get_Square(Point p);
     bool enter_Pointer_start(Point &a);
     bool enter_Pointer_end(Point &b);
-    bool can_move_there(char fType, const Point &pos, const Point &endPoint);
-    bool can_move_Pawn(const Point &pos, const Point &endPoint); // Զինվոր
-    void changeChessPieces(Square *);
+    bool where_can_figure_go(const Point &pos);
+    bool where_can_move_Pawn(const Point &pos);   // Զինվոր
+    bool where_can_move_Bishop(const Point &pos); // Փիղ
+    void change_chess_piece_count(const Figure &f);
+    void clear_possible_moves();
+    bool check_square(Square *sq, int &c);
 
 private:
     short ChessPieceW = 12;
@@ -83,43 +86,31 @@ Chess::~Chess()
 bool Chess::step()
 {
     std::cout << "Turn is " << (whoseTurn ? "White:\n" : "Black:\n");
+
     Point aPoint;
-    while (!enter_Pointer_start(aPoint))
+    while (!enter_Pointer_start(aPoint)) // enter start point
     {
     }
+
+    print_board(); // print possible moves
 
     Point bPoint;
-    while (!enter_Pointer_end(bPoint))
+    while (!enter_Pointer_end(bPoint)) // // enter start point
     {
     }
+    clear_possible_moves(); // clear_possible_moves
 
-    Figure fig = get_Square(aPoint)->getFigure();
+    Figure figEnd = get_Square(bPoint)->getFigure(); // change_chess_piece_count
+    change_chess_piece_count(figEnd);
 
-    int inputErrorsCount = 0;
-    while (!can_move_there(fig._name, aPoint, bPoint))
+    // change figures a->b
+    Figure figStart = get_Square(aPoint)->getFigure();
+    if ((bPoint._x == 1 || bPoint._x == 8) && figStart._name == 'P')
     {
-        std::cout << "you can't go there :(\n";
-        if (inputErrorsCount++ == 3)
-        {
-            std::cerr << "\nENTER START AGAIN :) " << (whoseTurn ? "White Pleyer\n" : "Black Pleyer\n");
-            return true;
-        }
-        while (!enter_Pointer_end(bPoint))
-        {
-        }
+        figStart._name = 'Q';
     }
 
-    Square *EndSq = get_Square(bPoint);
-    changeChessPieces(EndSq);
-
-    if ((bPoint._x == 1 || bPoint._x == 8) && fig._name == 'P')
-    {
-        fig._name = 'Q';
-    }
-
-    EndSq->setFigure(fig);
-
-    //
+    get_Square(bPoint)->setFigure(figStart);
     get_Square(aPoint)->setFigure({':', ':'});
 
     // change turn
@@ -127,59 +118,117 @@ bool Chess::step()
     return true;
 }
 
-bool Chess::can_move_there(char fType, const Point &pos, const Point &endPoint)
+bool Chess::where_can_figure_go(const Point &pos)
 {
-    // std::cout << "fType: " << fType << "\n";
-    switch (fType)
+    switch (get_Square(pos)->getFigure()._name)
     {
     case 'P':
-        return can_move_Pawn(pos, endPoint);
-
+        return where_can_move_Pawn(pos);
+    case 'B':
+        return where_can_move_Bishop(pos);
     default:
         return 0;
     }
 }
 
-bool Chess::can_move_Pawn(const Point &pos, const Point &endPoint)
+bool Chess::where_can_move_Pawn(const Point &pos)
 {
-    bool canMove = false;
-    if ((endPoint._y - pos._y) == 0)
+    int possiblePlaces = 0;
+
+    for (int i = 1; i <= ((pos._x == 2 || pos._x == 7) ? 2 : 1); ++i)
     {
-
-        for (int i = 1; i <= ((pos._x == 2 || pos._x == 7) ? 2 : 1); ++i)
+        Square *sq = get_Square(pos._x + (whoseTurn ? -i : i), pos._y);
+        if (!sq || sq->getFigure()._name != ':')
         {
-            Square *sq = get_Square(pos._x + (whoseTurn ? -i : i), pos._y);
+            break;
+        }
+        possiblePlaces++;
+        sq->setFigure({'X', ':'});
+    }
 
-            if (!sq || sq->getFigure()._name != ':')
+    int arr[2] = {1, -1};
+    for (int i = 0; i < 2; ++i)
+    {
+        Square *sq = get_Square(pos._x + (whoseTurn ? -1 : 1), (pos._y + arr[i]));
+        if (sq)
+        {
+            Figure fig = sq->getFigure();
+            if (fig._owner == (whoseTurn ? 'b' : 'w') && fig._name != 'K')
             {
-                canMove = false;
-                break;
-            }
-            else if (sq->isEqualPoint(endPoint))
-            {
-                canMove = true;
-                break;
+                possiblePlaces++;
+                sq->setFigure({'X', fig._name});
             }
         }
     }
-    else
+    return possiblePlaces;
+}
+
+bool Chess::where_can_move_Bishop(const Point &pos) // Փիղ
+{
+    int possiblePlaces = 0;
+    const int N = 9;
+
+    for (int i = pos._x - 1, j = pos._y - 1; i >= 1 && j >= 1; --i, --j)
     {
-        int arr[2] = {1, -1};
-        for (int i = 0; i < 2; ++i)
+        Square *sq = get_Square(i, j);
+        if (!check_square(sq, possiblePlaces))
         {
-            Square *sq = get_Square(pos._x + (whoseTurn ? -1 : 1), (pos._y + arr[i]));
-            if (sq)
-            {
-                Figure fig = sq->getFigure();
-                if (sq->isEqualPoint(endPoint) && fig._owner == (whoseTurn ? 'b' : 'w') && fig._name != 'K')
-                {
-                    canMove = true;
-                }
-            }
+            break;
+        }
+    }
+    for (int i = pos._x + 1, j = pos._y + 1; i < N && j < N; ++i, ++j)
+    {
+        Square *sq = get_Square(i, j);
+        if (!check_square(sq, possiblePlaces))
+        {
+            break;
+        }
+    }
+    for (int i = pos._x + 1, j = pos._y - 1; i < N && j >= 1; ++i, --j)
+    {
+        Square *sq = get_Square(i, j);
+        if (!check_square(sq, possiblePlaces))
+        {
+            break;
+        }
+    }
+    for (int i = pos._x - 1, j = pos._y + 1; i >= 1 && j < N; --i, ++j)
+    {
+        Square *sq = get_Square(i, j);
+        if (!check_square(sq, possiblePlaces))
+        {
+            break;
         }
     }
 
-    return canMove;
+    return possiblePlaces;
+}
+
+bool Chess::check_square(Square *sq, int &c)
+{
+    if (sq)
+    {
+        Figure f = sq->getFigure();
+        if (f._name == 'K')
+        {
+            return 0;
+        }
+        if (f._owner == ':')
+        {
+            sq->setFigure({'X', ':'});
+            c++;
+        }
+        else
+        {
+            if (f._owner == (whoseTurn ? 'b' : 'w'))
+            {
+                sq->setFigure({'X', f._name});
+                c++;
+            }
+            return 0;
+        }
+    }
+    return true;
 }
 
 bool Chess::enter_Pointer_start(Point &a)
@@ -199,6 +248,12 @@ bool Chess::enter_Pointer_start(Point &a)
         std::cout << "it is " << (whoseTurn ? "White" : "Black") << " turn :(" << std::endl;
         return false;
     }
+    if (!where_can_figure_go(a))
+    {
+        std::cout << "that figure cannot move :(\n";
+        return false;
+    }
+
     return true;
 }
 bool Chess::enter_Pointer_end(Point &b)
@@ -208,21 +263,15 @@ bool Chess::enter_Pointer_end(Point &b)
         return false;
     }
 
-    if (get_Square(b)->getFigure()._name == 'K')
+    if (get_Square(b)->getFigure()._owner != 'X')
     {
-        std::cout << "you can't put the figure on the king :(\n";
-        return false;
-    }
-    if (get_Square(b)->getFigure()._owner == (whoseTurn ? 'w' : 'b'))
-    {
-        std::cout << "you can't put it on your figure :(\n";
+        std::cout << "that figure can't go there :(\n";
         return false;
     }
     return true;
 }
 Square *Chess::get_Square(short x, short y)
 {
-    // std::cout << "get_Square: x " << x << "  y " << y << "\n";
     if (x < 1 || x > 8 || y < 1 || y > 8)
     {
         return nullptr;
@@ -231,20 +280,42 @@ Square *Chess::get_Square(short x, short y)
 }
 Square *Chess::get_Square(Point p)
 {
-    // std::cout << "get_Square: x " << x << "  y " << y << "\n";
     if (p._x < 1 || p._x > 8 || p._y < 1 || p._y > 8)
     {
         return nullptr;
     }
     return &Board[p._x][p._y];
 }
-void Chess::changeChessPieces(Square *EndSq)
+void Chess::clear_possible_moves()
 {
-    if (EndSq->getFigure()._owner == 'w')
+    const int N = 8;
+    for (int i = 1; i <= N; ++i)
+    {
+        for (int j = 1; j <= N; ++j)
+        {
+            Figure f = Board[i][j].getFigure();
+            if (f._owner == 'X')
+            {
+                if (f._name == ':')
+                {
+                    Board[i][j].setFigure({':', ':'});
+                }
+                else
+                {
+                    Board[i][j].setFigure({(whoseTurn ? 'b' : 'w'), f._name});
+                }
+            }
+        }
+    }
+}
+
+void Chess::change_chess_piece_count(const Figure &f)
+{
+    if (f._owner == 'w')
     {
         ChessPieceW--;
     }
-    else if (EndSq->getFigure()._owner == 'b')
+    else if (f._owner == 'b')
     {
         ChessPieceB--;
     }
@@ -279,7 +350,16 @@ void Chess::print_board() const
                 }
                 else
                 {
-                    std::cout << Board[i][j].getFigure()._owner << Board[i][j].getFigure()._name << "  ";
+                    Figure f = Board[i][j].getFigure();
+                    if (f._owner == (whoseTurn ? 'w' : 'b'))
+                    {
+                        std::cout << (char)(f._owner - 32);
+                    }
+                    else
+                    {
+                        std::cout << f._owner;
+                    }
+                    std::cout << f._name << "  ";
                 }
             }
         }
