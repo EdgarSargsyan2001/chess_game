@@ -28,11 +28,14 @@ private:
     bool enter_Pointer_start(Point &a);
     bool enter_Pointer_end(Point &b);
     bool where_can_figure_go(const Point &pos);
-    bool where_can_move_Pawn(const Point &pos);   // Զինվոր
-    bool where_can_move_Bishop(const Point &pos); // Փիղ
-    void change_chess_piece_count(const Figure &f);
+    int where_can_move_Pawn(const Point &pos);   // Զինվոր
+    int where_can_move_Bishop(const Point &pos); // Փիղ
+    int where_can_move_Rook(const Point &pos);   // Նավակ
+    int where_can_move_King(const Point &pos);   // Թագավոր
+    int where_can_move_Queen(const Point &pos);  // Թագուհի
     void clear_possible_moves();
     bool check_square(Square *sq, int &c);
+    void change_chess_piece_count(const Figure &f);
 
 private:
     short ChessPieceW = 12;
@@ -126,12 +129,18 @@ bool Chess::where_can_figure_go(const Point &pos)
         return where_can_move_Pawn(pos);
     case 'B':
         return where_can_move_Bishop(pos);
+    case 'R':
+        return where_can_move_Rook(pos);
+    case 'Q':
+        return where_can_move_Queen(pos);
+    case 'K':
+        return where_can_move_King(pos);
     default:
         return 0;
     }
 }
 
-bool Chess::where_can_move_Pawn(const Point &pos)
+int Chess::where_can_move_Pawn(const Point &pos)
 {
     int possiblePlaces = 0;
 
@@ -163,7 +172,7 @@ bool Chess::where_can_move_Pawn(const Point &pos)
     return possiblePlaces;
 }
 
-bool Chess::where_can_move_Bishop(const Point &pos) // Փիղ
+int Chess::where_can_move_Bishop(const Point &pos) // Փիղ
 {
     int possiblePlaces = 0;
     const int N = 9;
@@ -204,6 +213,69 @@ bool Chess::where_can_move_Bishop(const Point &pos) // Փիղ
     return possiblePlaces;
 }
 
+int Chess::where_can_move_Rook(const Point &pos) // Նավակ
+{
+    int possiblePlaces = 0;
+    const int N = 9;
+
+    for (int i = pos._x + 1; i < N; ++i)
+    {
+        Square *sq = get_Square(i, pos._y);
+        if (!check_square(sq, possiblePlaces))
+        {
+            break;
+        }
+    }
+    for (int i = pos._x - 1; i >= 1; --i)
+    {
+        Square *sq = get_Square(i, pos._y);
+        if (!check_square(sq, possiblePlaces))
+        {
+            break;
+        }
+    }
+    for (int j = pos._y + 1; j < N; ++j)
+    {
+        Square *sq = get_Square(pos._x, j);
+        if (!check_square(sq, possiblePlaces))
+        {
+            break;
+        }
+    }
+    for (int j = pos._y - 1; j >= 1; --j)
+    {
+        Square *sq = get_Square(pos._x, j);
+        if (!check_square(sq, possiblePlaces))
+        {
+            break;
+        }
+    }
+    return possiblePlaces;
+}
+int Chess::where_can_move_King(const Point &pos) // Թագավոր
+{
+    int possiblePlaces = 0;
+    for (int i = pos._x - 1; i < pos._x + 2; ++i)
+    {
+        for (int j = pos._y - 1; j < pos._y + 2; ++j)
+        {
+            if (i != pos._x || j != pos._y)
+            {
+                // std::cout << "x: " << i << "  y:" << j << "\n";
+                Square *sq = get_Square(i, j);
+                check_square(sq, possiblePlaces);
+            }
+        }
+    }
+    return possiblePlaces;
+}
+int Chess::where_can_move_Queen(const Point &pos) // Թագուհի
+{
+    int possiblePlaces = 0;
+    possiblePlaces += where_can_move_Bishop(pos);
+    possiblePlaces += where_can_move_Rook(pos);
+    return possiblePlaces;
+}
 bool Chess::check_square(Square *sq, int &c)
 {
     if (sq)
