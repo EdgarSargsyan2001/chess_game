@@ -33,6 +33,7 @@ private:
     int where_can_move_Rook(const Point &pos);   // Նավակ
     int where_can_move_King(const Point &pos);   // Թագավոր
     int where_can_move_Queen(const Point &pos);  // Թագուհի
+    int where_can_move_Knight(const Point &pos); // Ձի
     void clear_possible_moves();
     bool check_square(Square *sq, int &c);
     void change_chess_piece_count(const Figure &f);
@@ -127,6 +128,8 @@ bool Chess::where_can_figure_go(const Point &pos)
     {
     case 'P':
         return where_can_move_Pawn(pos);
+    case 'N':
+        return where_can_move_Knight(pos);
     case 'B':
         return where_can_move_Bishop(pos);
     case 'R':
@@ -169,6 +172,24 @@ int Chess::where_can_move_Pawn(const Point &pos)
             }
         }
     }
+    return possiblePlaces;
+}
+
+int Chess::where_can_move_Knight(const Point &pos)
+{
+    int possiblePlaces = 0;
+    int a[] = {2, 2, -2, -2};
+    int b[] = {1, -1};
+
+    for (int i = 0; i < 8; ++i)
+    {
+        int X = (i < 4) ? a[i % 4] : b[i % 2];
+        int Y = (i < 4) ? b[i % 2] : a[i % 4];
+
+        Square *sq = get_Square(pos._x + X, pos._y + Y);
+        check_square(sq, possiblePlaces);
+    }
+
     return possiblePlaces;
 }
 
